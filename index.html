@@ -68,6 +68,7 @@
     <button onclick="login()">Entrar</button>
     <button onclick="signup()">Cadastrar</button>
     <button onclick="logout()">Sair</button>
+  
   </div>
 
   <div class="user-info" id="userInfo" style="display:none;">
@@ -129,7 +130,7 @@
         .then(() => alert('Conta criada!'))
         .catch(error => alert(error.message));
     }
-
+    
     function login() {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
