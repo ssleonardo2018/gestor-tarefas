@@ -4,43 +4,99 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestor de Tarefas Diárias</title>
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/190/190411.png" type="image/png">
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f4; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #121212;
+      color: #f0f0f0;
+      transition: background 0.5s, color 0.5s;
+    }
     h1 { text-align: center; }
-    .task-form, .task-list, .task-history { margin-bottom: 30px; }
-    input, button { padding: 10px; margin: 5px 0; }
-    .task { background: #fff; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .task-form, .task-list, .task-history, .auth-section, .user-info { margin-bottom: 30px; }
+    input, button {
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+      border: none;
+    }
+    .task {
+      background: #1e1e1e;
+      border: 1px solid #333;
+      padding: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: transform 0.3s;
+    }
+    .task:hover { transform: scale(1.02); }
     .completed { text-decoration: line-through; color: gray; }
-    .pending { color: darkred; }
-    .notification { background: #dff0d8; color: #3c763d; padding: 10px; margin: 10px 0; border: 1px solid #d6e9c6; }
+    .pending { color: #ff6b6b; }
+    .notification {
+      background: #2e7d32;
+      color: white;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
   </style>
 </head>
 <body>
   <h1>Gestor de Tarefas Diárias</h1>
 
-  <div class="task-form">
-    <h3>Nova Tarefa</h3>
-    <input type="text" id="taskName" placeholder="Descrição da tarefa">
-    <input type="time" id="taskTime">
-    <button onclick="addTask()">Adicionar</button>
+  <div class="auth-section">
+    <h3>Login</h3>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Senha">
+    <button onclick="login()">Entrar</button>
+    <button onclick="signup()">Cadastrar</button>
+    <button onclick="logout()">Sair</button>
   </div>
 
-  <div class="notification" id="notification" style="display:none;"></div>
-
-  <div class="task-list">
-    <h3>Tarefas Pendentes</h3>
-    <div id="pendingTasks"></div>
+  <div class="user-info" id="userInfo" style="display:none;">
+    <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="avatar" id="userAvatar">
+    <span id="userName"></span>
   </div>
 
-  <div class="task-history">
-    <h3>Histórico de Tarefas</h3>
-    <div id="taskHistory"></div>
+  <div id="mainApp" style="display:none;">
+    <div class="task-form">
+      <h3>Nova Tarefa</h3>
+      <input type="text" id="taskName" placeholder="Descrição da tarefa">
+      <input type="time" id="taskTime">
+      <button onclick="addTask()">Adicionar</button>
+    </div>
+
+    <div class="notification" id="notification" style="display:none;"></div>
+
+    <div class="task-list">
+      <h3>Tarefas Pendentes</h3>
+      <div id="pendingTasks"></div>
+    </div>
+
+    <div class="task-history">
+      <h3>Histórico de Tarefas</h3>
+      <div id="taskHistory"></div>
+    </div>
   </div>
 
   <script>
-    // CONFIGURAÇÃO DO FIREBASE
     const firebaseConfig = {
       apiKey: "AIzaSyCld490FGC-E-M62YqbM85EveNll1jAQzE",
       authDomain: "gestortarefas-8959e.firebaseapp.com",
@@ -53,6 +109,37 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const auth = firebase.auth();
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('userInfo').style.display = 'flex';
+        document.getElementById('userName').textContent = user.email;
+      } else {
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('userInfo').style.display = 'none';
+      }
+    });
+
+    function signup() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      auth.createUserWithEmailAndPassword(email, password)
+        .then(() => alert('Conta criada!'))
+        .catch(error => alert(error.message));
+    }
+
+    function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      auth.signInWithEmailAndPassword(email, password)
+        .catch(error => alert(error.message));
+    }
+
+    function logout() {
+      auth.signOut();
+    }
 
     function addTask() {
       const name = document.getElementById('taskName').value.trim();
