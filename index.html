@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestor de Tarefas Diárias</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f4; }
+    h1 { text-align: center; }
+    .task-form, .task-list, .task-history { margin-bottom: 30px; }
+    input, button { padding: 10px; margin: 5px 0; }
+    .task { background: #fff; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .completed { text-decoration: line-through; color: gray; }
+    .pending { color: darkred; }
+    .notification { background: #dff0d8; color: #3c763d; padding: 10px; margin: 10px 0; border: 1px solid #d6e9c6; }
+  </style>
+</head>
+<body>
+  <h1>Gestor de Tarefas Diárias</h1>
+
+  <div class="task-form">
+    <h3>Nova Tarefa</h3>
+    <input type="text" id="taskName" placeholder="Descrição da tarefa">
+    <input type="time" id="taskTime">
+    <button onclick="addTask()">Adicionar</button>
+  </div>
+
+  <div class="notification" id="notification" style="display:none;"></div>
+
+  <div class="task-list">
+    <h3>Tarefas Pendentes</h3>
+    <div id="pendingTasks"></div>
+  </div>
+
+  <div class="task-history">
+    <h3>Histórico de Tarefas</h3>
+    <div id="taskHistory"></div>
+  </div>
+
+  <script>
+    // CONFIGURAÇÃO DO FIREBASE
+    const firebaseConfig = {
+      apiKey: "AIzaSyCld490FGC-E-M62YqbM85EveNll1jAQzE",
+      authDomain: "gestortarefas-8959e.firebaseapp.com",
+      databaseURL: "https://gestortarefas-8959e-default-rtdb.firebaseio.com",
+      projectId: "gestortarefas-8959e",
+      storageBucket: "gestortarefas-8959e.firebasestorage.app",
+      messagingSenderId: "997639136217",
+      appId: "1:997639136217:web:4fe2b27991bf5d4f84afc8"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function addTask() {
+      const name = document.getElementById('taskName').value.trim();
+      const time = document.getElementById('taskTime').value;
+      if (!name || !time) return alert('Preencha todos os campos');
+      const newTask = {
+        name,
+        time,
+        completed: false,
+        createdAt: new Date().toISOString()
+      };
+      db.ref('tarefas').push(newTask);
+      document.getElementById('taskName').value = '';
+      document.getElementById('taskTime').value = '';
+    }
+
+    function completeTask(id, task) {
+      task.completed = true;
+      task.completedAt = new Date().toLocaleTimeString();
+      db.ref('tarefas/' + id).set(task);
+      showNotification(`Tarefa "${task.name}" concluída!`);
+    }
+
+    function renderTasks(snapshot) {
+      const tasks = snapshot.val();
+      const pendingDiv = document.getElementById('pendingTasks');
+      const historyDiv = document.getElementById('taskHistory');
+      pendingDiv.innerHTML = '';
+      historyDiv.innerHTML = '';
+
+      for (const id in tasks) {
+        const task = tasks[id];
+        const div = document.createElement('div');
+        div.className = 'task';
+        if (task.completed) {
+          div.classList.add('completed');
+          div.innerHTML = `${task.name} - concluída às ${task.completedAt}`;
+          historyDiv.appendChild(div);
+        } else {
+          div.innerHTML = `<span class="pending">${task.name} - ${task.time}</span> <button onclick='completeTask("${id}", ${JSON.stringify(task)})'>Concluir</button>`;
+          pendingDiv.appendChild(div);
+        }
+      }
+    }
+
+    function showNotification(msg) {
+      const notif = document.getElementById('notification');
+      notif.innerText = msg;
+      notif.style.display = 'block';
+      setTimeout(() => notif.style.display = 'none', 3000);
+    }
+
+    function checkTimeAlerts(snapshot) {
+      const tasks = snapshot.val();
+      const now = new Date();
+      const currentTime = now.toTimeString().slice(0,5);
+
+      for (const id in tasks) {
+        const task = tasks[id];
+        if (!task.completed && task.time === currentTime && !task.alerted) {
+          task.alerted = true;
+          db.ref('tarefas/' + id).update({ alerted: true });
+          showNotification(`Alerta: Tarefa "${task.name}" agendada para agora!`);
+        }
+      }
+    }
+
+    db.ref('tarefas').on('value', snapshot => {
+      renderTasks(snapshot);
+      checkTimeAlerts(snapshot);
+    });
+
+    setInterval(() => {
+      db.ref('tarefas').once('value').then(checkTimeAlerts);
+    }, 60000);
+  </script>
+</body>
+</html>
